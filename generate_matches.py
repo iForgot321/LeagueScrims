@@ -1,8 +1,7 @@
 import csv
+import os
 import time
 import random
-import gspread
-from google.oauth2.service_account import Credentials
 from itertools import permutations
 from functools import cmp_to_key
 
@@ -10,23 +9,32 @@ from functools import cmp_to_key
 SPREADSHEET_ID = '12oyK0TvokO4i2c2nIBA0OqRQa-tWqCw5i7gadXXZhWE'  # Or use spreadsheet name
 WORKSHEET_NAME = 'Ratings'  # Name of the worksheet/tab
 CREDENTIALS_FILE = 'credentials.json'  # Path to your service account credentials file
+BACKUP_CSV_FILE = 'sheet.csv'  # Local fallback used when credentials aren't available
 
-# Set up Google Sheets API credentials
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
-creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
-client = gspread.authorize(creds)
-
-# Open the spreadsheet and worksheet
-spreadsheet = client.open_by_key(SPREADSHEET_ID)  # Or use client.open(SPREADSHEET_NAME) if using name
-worksheet = spreadsheet.worksheet(WORKSHEET_NAME)
-
-
-# Get all records from the worksheet, specifying expected headers to avoid duplicate issues
 expected_headers = ['Roles', 'TOP', 'JGL', 'MID', 'ADC', 'SUP']
-records = worksheet.get_all_records(expected_headers=expected_headers, head=3)
+
+if os.path.exists(CREDENTIALS_FILE):
+    import gspread
+    from google.oauth2.service_account import Credentials
+
+    # Set up Google Sheets API credentials
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+    client = gspread.authorize(creds)
+
+    # Open the spreadsheet and worksheet
+    spreadsheet = client.open_by_key(SPREADSHEET_ID)  # Or use client.open(SPREADSHEET_NAME) if using name
+    worksheet = spreadsheet.worksheet(WORKSHEET_NAME)
+
+    # Get all records from the worksheet, specifying expected headers to avoid duplicate issues
+    records = worksheet.get_all_records(expected_headers=expected_headers, head=3)
+else:
+    print(f"'{CREDENTIALS_FILE}' not found, falling back to local backup '{BACKUP_CSV_FILE}'.")
+    with open(BACKUP_CSV_FILE, newline='') as f:
+        records = list(csv.DictReader(f))
 
 
-players = ['Peiyan', 'Edward', 'John', 'Daniel', 'Mirl', 'Avery', 'Jackie', 'Roy', 'Tobi', 'Rooney']
+players = ['Aldrich', 'Jimmy', 'Edison', 'Jackie', 'Bono', 'Avery', 'Rooney', 'Tobi', 'Sanyu', 'Mirl']
 player_index = [-1 for _ in range(len(players))]
 player_dict = []
 
@@ -106,7 +114,7 @@ for permutation in all_permutations:
     if counter % 300000 == 0:
         print(f"Processed {counter} permutations...")
 
-bad_synergy = [("Tobi", "Noelle")]
+bad_synergy = [("John", "Mirl")]
 def has_bad_synergy(team_indices):
     team_names = [player_dict[idx][5] for idx in team_indices]
     for player1, player2 in bad_synergy:
